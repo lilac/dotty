@@ -2297,8 +2297,34 @@ object Parsers {
         if !in.isOperator && in.lookahead.isArrow && location != Location.InGuard && in.fewerBracesEnabled =>
           val app = applyToClosure(t, in.offset, convertToParams(termIdent()))
           simpleExprRest(app, location, canApply = true)
+        // application without ()
+        case _ if canApply && isLiteral || Tokens.isIdentifier(in.token) && !in.isOperator =>
+          val app = atSpan(startOffset(t), in.offset) {
+            val arg = simpleTerm(Location.InArgs)
+            mkApply(t, (arg :: Nil, false))
+          }
+          simpleExprRest(app, location, canApply = true)
         case _ =>
           t
+      }
+    }
+
+    def simpleTerm(location: Location): Tree = {
+      var canApply = true
+      in.token match {
+        case XMLSTART =>
+          xmlLiteral()
+        case IDENTIFIER =>
+          if (isSplice) splice(isType = false)
+          else simpleRef()
+        case BACKQUOTED_IDENT | THIS | SUPER =>
+          simpleRef()
+        case _ =>
+          if isLiteral then
+            literal()
+          else
+            syntaxErrorOrIncomplete(IllegalStartSimpleExpr(tokenString(in.token)), expectedOffset)
+            errorTermTree
       }
     }
 
@@ -2368,7 +2394,8 @@ object Parsers {
      */
     def argumentExprss(fn: Tree): Tree = {
       argumentStart()
-      if (in.token == LPAREN || in.isNestedStart) argumentExprss(mkApply(fn, argumentExprs()))
+      if (in.token == LPAREN || in.isNestedStart || Tokens.isIdentifier(in.token) && !in.isOperator)
+        argumentExprss(mkApply(fn, argumentExprs()))
       else fn
     }
 
