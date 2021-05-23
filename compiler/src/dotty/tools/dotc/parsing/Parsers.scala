@@ -156,7 +156,7 @@ object Parsers {
       accept(if (in.token == INDENT) INDENT else LBRACE)
       var openBraces = 1
       while (in.token != EOF && openBraces > 0)
-        skipBracesHook() getOrElse {
+        skipBracesHook() .getOrElse {
           if (in.token == LBRACE || in.token == INDENT) openBraces += 1
           else if (in.token == RBRACE || in.token == OUTDENT) openBraces -= 1
           in.nextToken()
@@ -185,12 +185,12 @@ object Parsers {
     def isSimpleLiteral =
       simpleLiteralTokens.contains(in.token)
       || isIdent(nme.raw.MINUS) && numericLitTokens.contains(in.lookahead.token)
-    def isLiteral = literalTokens contains in.token
-    def isNumericLit = numericLitTokens contains in.token
-    def isTemplateIntro = templateIntroTokens contains in.token
-    def isDclIntro = dclIntroTokens contains in.token
+    def isLiteral = literalTokens .contains (in.token)
+    def isNumericLit = numericLitTokens .contains (in.token)
+    def isTemplateIntro = templateIntroTokens .contains (in.token)
+    def isDclIntro = dclIntroTokens .contains (in.token)
     def isStatSeqEnd = in.isNestedEnd || in.token == EOF || in.token == RPAREN
-    def mustStartStat = mustStartStatTokens contains in.token
+    def mustStartStat = mustStartStatTokens .contains (in.token)
 
     /** Is current token a hard or soft modifier (in modifier position or not)? */
     def isModifier: Boolean = modifierTokens.contains(in.token) || in.isSoftModifier
@@ -259,7 +259,7 @@ object Parsers {
       val lastRegion = in.currentRegion
       def atStop =
         in.token == EOF
-        || skipStopTokens.contains(in.token) && (in.currentRegion eq lastRegion)
+        || skipStopTokens.contains(in.token) && (in.currentRegion .eq (lastRegion))
       while !atStop do
         in.nextToken()
 
@@ -905,7 +905,7 @@ object Parsers {
           if (prec < opPrec || leftAssoc && prec == opPrec) {
             opStack = opStack.tail
             recur {
-              atSpan(opInfo.operator.span union opInfo.operand.span union top.span) {
+              atSpan(opInfo.operator.span .union (opInfo.operand.span) .union (top.span)) {
                 InfixOp(opInfo.operand, opInfo.operator, top)
               }
             }
@@ -987,7 +987,7 @@ object Parsers {
       if (tok == BACKQUOTED_IDENT) tree.pushAttachment(Backquoted, ())
 
       // Make sure that even trees with parsing errors have a offset that is within the offset
-      val errorOffset = offset min (in.lastOffset - 1)
+      val errorOffset = offset .min (in.lastOffset - 1)
       if (tree.name == nme.ERROR && tree.span == NoSpan) tree.withSpan(Span(errorOffset, errorOffset))
       else atSpan(offset)(tree)
     }
@@ -1768,7 +1768,7 @@ object Parsers {
       val t = typeBounds()
       val cbs = contextBounds(pname)
       if (cbs.isEmpty) t
-      else atSpan((t.span union cbs.head.span).start) { ContextBounds(t, cbs) }
+      else atSpan((t.span .union (cbs.head.span)).start) { ContextBounds(t, cbs) }
     }
 
     def contextBounds(pname: TypeName): List[Tree] =
@@ -2835,7 +2835,7 @@ object Parsers {
               && localModifierTokens.subsetOf(allowed) // soft modifiers are admissible everywhere local modifiers are
               && !in.lookahead.isColon()
         then
-          val isAccessMod = accessModifierTokens contains in.token
+          val isAccessMod = accessModifierTokens .contains (in.token)
           val mods1 = addModifier(mods)
           loop(if (isAccessMod) accessQualifierOpt(mods1) else mods1)
         else if (in.token == NEWLINE && (mods.hasFlags || mods.hasAnnotations)) {
@@ -2876,7 +2876,7 @@ object Parsers {
     }
 
     def annotsAsMods(skipNewLines: Boolean = false): Modifiers =
-      Modifiers() withAnnotations annotations(skipNewLines)
+      Modifiers() .withAnnotations (annotations(skipNewLines))
 
     def defAnnotsMods(allowed: BitSet): Modifiers =
       modifiers(allowed, annotsAsMods(skipNewLines = true))
@@ -3504,7 +3504,7 @@ object Parsers {
 
     private def checkAccessOnly(mods: Modifiers, where: String): Modifiers =
       val mods1 = mods & (AccessFlags | Enum)
-      if mods1 ne mods then
+      if mods1 .ne (mods) then
         syntaxError(s"Only access modifiers are allowed on enum $where")
       mods1
 
